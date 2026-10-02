@@ -2,44 +2,54 @@
 <resources>
     <string name="app_name">Ascend</string>
 
-    <string name="tab_home">Dziś</string>
-    <string name="tab_habits">Nawyki</string>
+    <string name="tab_meditate">Medytuj</string>
     <string name="tab_journal">Dziennik</string>
-    <string name="tab_learn">Nauka</string>
+    <string name="tab_stats">Statystyki</string>
 
-    <string name="home_title">Dziś</string>
-    <string name="overview_habits">Aktywne nawyki</string>
-    <string name="overview_done">Zrobione dziś</string>
-    <string name="overview_due">Karty do powtórki</string>
-    <string name="overview_entries">Wpisy w dzienniku</string>
+    <!-- Medytacja -->
+    <string name="meditate_title">Medytuj</string>
+    <string name="meditate_start">Start</string>
+    <string name="meditate_stop">Zatrzymaj</string>
+    <string name="meditate_pattern">Wzorzec oddechu</string>
+    <string name="meditate_technique">Technika</string>
+    <string name="meditate_duration">Czas (min)</string>
+    <string name="meditate_duration_free">Bez limitu (aż zatrzymasz)</string>
+    <string name="meditate_elapsed">%1$s</string>
+    <string name="meditate_breathe_in">Wdech</string>
+    <string name="meditate_hold">Wstrzymaj</string>
+    <string name="meditate_breathe_out">Wydech</string>
+    <string name="meditate_finish">Zakończ</string>
+    <string name="meditate_saved">Sesja zapisana</string>
+    <string name="meditate_save_title">Zapisz sesję</string>
+    <string name="meditate_mood_before">Nastrój przed</string>
+    <string name="meditate_mood_after">Nastrój po</string>
+    <string name="meditate_notes">Notatki</string>
+    <string name="meditate_notes_hint">Jak się czujesz?</string>
 
-    <string name="habits_title">Nawyki</string>
-    <string name="habits_add">Nowy nawyk</string>
-    <string name="habits_name">Nazwa</string>
-    <string name="habits_description">Opis (opcjonalnie)</string>
-    <string name="habits_empty">Brak nawyków. Dodaj pierwszy!</string>
-    <string name="streak_current">Seria: %1$d</string>
-    <string name="streak_longest">Rekord: %1$d</string>
+    <!-- Techniki -->
+    <string name="technique_breath">Oddech</string>
+    <string name="technique_silence">Cisza</string>
+    <string name="technique_body_scan">Skan ciała</string>
+    <string name="technique_walking">W ruchu</string>
+    <string name="technique_mantra">Mantra</string>
+    <string name="technique_guided">Z przewodnikiem</string>
 
+    <!-- Dziennik -->
     <string name="journal_title">Dziennik</string>
-    <string name="journal_add">Nowy wpis</string>
-    <string name="journal_title_label">Tytuł</string>
-    <string name="journal_body_label">Jak minął dzień?</string>
-    <string name="journal_mood">Nastrój</string>
-    <string name="journal_empty">Brak wpisów.</string>
+    <string name="journal_empty">Brak sesji. Medytuj, a sesje pojawią się tutaj.</string>
     <string name="journal_delete">Usuń</string>
+    <string name="journal_duration">%1$d min</string>
 
-    <string name="learn_title">Nauka</string>
-    <string name="learn_add">Nowa karta</string>
-    <string name="learn_deck">Talia</string>
-    <string name="learn_front">Przód</string>
-    <string name="learn_back">Tył</string>
-    <string name="learn_empty">Na razie brak kart do powtórki.</string>
-    <string name="learn_show">Pokaż odpowiedź</string>
-    <string name="learn_again">Znowu</string>
-    <string name="learn_hard">Trudne</string>
-    <string name="learn_good">Dobrze</string>
-    <string name="learn_easy">Łatwe</string>
+    <!-- Statystyki -->
+    <string name="stats_title">Statystyki</string>
+    <string name="stats_streak">Obecna passa</string>
+    <string name="stats_streak_days">%1$d dni</string>
+    <string name="stats_longest">Najdłuższa passa</string>
+    <string name="stats_total_sessions">Sesje</string>
+    <string name="stats_total_time">Łączny czas</string>
+    <string name="stats_today">Dziś</string>
+    <string name="stats_today_sessions">%1$d sesji</string>
+    <string name="stats_minutes">%1$d min</string>
 
     <string name="mood_awful">Okropnie</string>
     <string name="mood_bad">Źle</string>

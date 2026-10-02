@@ -9,8 +9,8 @@
 cmake_minimum_required(VERSION 3.22)
 
 project(ascend
-        VERSION 0.1.0
-        DESCRIPTION "Ascend — self-development core (habits, journal, spaced repetition)"
+        VERSION 0.2.0
+        DESCRIPTION "Ascend — meditation helper core (sessions, breathing, stats)"
         LANGUAGES CXX)
 
 # ---------------------------------------------------------------------------

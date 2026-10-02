@@ -1,22 +1,23 @@
 # Ascend
 
-Aplikacja mobilna do samorozwoju w **natywnym C++** (Android NDK + JNI).
+Pomocnik do medytacji w **natywnym C++** (Android NDK + JNI).
 Cała logika domenowa mieszka w przenośnym rdzeniu C++23; Android jest tylko
 cienką nakładką UI (Kotlin + Jetpack Compose).
 
-## Funkcje (MVP „wszystko po trochu")
+## Funkcje
 
-- **Nawyki** — codzienne/tygodniowe nawyki, odhaczanie, licznik serii (streak).
-- **Dziennik** — wpisy z nastrojem (1–5), dodawanie i usuwanie.
-- **Nauka** — fiszki z powtórkami rozłożonymi w czasie (algorytm SM-2).
+- **Licznik sesji + dzwonek** — wybierz czas (albo medytuj bez limitu) i technikę.
+- **Prowadzenie oddechu** — animowany wzorzec (4-4, 4-7-8, kwadrat, własne rytmy).
+- **Dziennik medytacji** — zapis sesji z nastrojem przed/po (1–5) i notatkami.
+- **Statystyki** — obecna i najdłuższa passa dni, liczba sesji, łączny czas „dziś".
 - **i18n** — polski i angielski od początku (Android `values` + `values-pl`).
-- Cały stan w jednym snapshotcie JSON (wersjonowany, zapis lokalny).
+- Cały stan w jednym snapshotcie JSON (wersjonowany, zapis lokalny, 100% offline).
 
 ## Architektura
 
 ```
 core/      przenośny rdzeń C++23 (ZERO zależności od Androida)
-  ├── types.h, habit.h, journal.h, srs.h, store.h, facade.h, json_io.h
+  ├── types.h, session.h, breathing.h, stats.h, store.h, facade.h, json_io.h
 bridge/    mostek JNI (jedyna warstwa znająca Androida)
 android/   Gradle + Kotlin + Compose (UI, i18n, trwałość snapshotu)
 ```

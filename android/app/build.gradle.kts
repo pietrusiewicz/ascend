@@ -12,8 +12,8 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
-val versionNameOverride = (project.findProperty("versionName") as String?) ?: "0.1.0"
-val versionCodeOverride = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 1
+val versionNameOverride = (project.findProperty("versionName") as String?) ?: "0.2.0"
+val versionCodeOverride = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 2
 
 android {
     namespace = "pl.ascend"

@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ascend/facade.h"
 
-#include <cstddef>
 #include <cstdint>
 #include <stdexcept>
 #include <string>
@@ -13,7 +12,7 @@
 #include "ascend/json_io.h"
 
 #ifndef ASC_VERSION_STRING
-#define ASC_VERSION_STRING "0.1.0"
+#define ASC_VERSION_STRING "0.2.0"
 #endif
 
 namespace ascend {
@@ -27,6 +26,31 @@ json err(std::string msg) {
 
 json okJson() {
     return json{{"ok", true}};
+}
+
+json statsJson(const MeditationStats& st, DayNumber today) {
+    return json{{"ok", true},
+                {"today", today},
+                {"streakDays", st.streakDays},
+                {"longestStreak", st.longestStreak},
+                {"totalSessions", st.totalSessions},
+                {"totalSeconds", st.totalSeconds},
+                {"sessionsToday", st.sessionsToday},
+                {"secondsToday", st.secondsToday}};
+}
+
+// Odczyt mood z JSON: klucz może być int (1..5) albo null/brak.
+std::optional<Mood> moodField(const json& j, const char* key) {
+    if (!j.contains(key) || j[key].is_null()) return std::nullopt;
+    const int v = j[key].get<int>();
+    switch (v) {
+        case 1: return Mood::Awful;
+        case 2: return Mood::Bad;
+        case 3: return Mood::Neutral;
+        case 4: return Mood::Good;
+        case 5: return Mood::Great;
+        default: return std::nullopt;
+    }
 }
 
 }  // namespace
@@ -55,185 +79,105 @@ std::string Facade::command(std::string_view raw) {
                         {"schema", saveSchemaVersion()}}.dump();
         }
 
+        if (op == "stats") {
+            const DayNumber today = j.value("today", DayNumber{0});
+            return statsJson(mStore.stats(today), today).dump();
+        }
+
         if (op == "overview") {
             const DayNumber today = j.value("today", DayNumber{0});
-            const EpochMs nowMs = today * kMillisPerDay;
-            std::size_t active = 0;
-            std::size_t doneToday = 0;
-            for (const auto& h : mStore.habits(false)) {
-                ++active;
-                if (mStore.isCompleted(h.id, today)) ++doneToday;
+            return statsJson(mStore.stats(today), today).dump();
+        }
+
+        // ------------------------------------------------------- Sesje
+        if (op == "session.list") {
+            auto arr = json::array();
+            for (const auto& s : mStore.sessions()) arr.push_back(sessionToJson(s));
+            return json{{"ok", true}, {"sessions", std::move(arr)}}.dump();
+        }
+
+        if (op == "session.get") {
+            const auto s = mStore.session(j.value("id", SessionId{0}));
+            if (!s) return err("session not found").dump();
+            return json{{"ok", true}, {"session", sessionToJson(*s)}}.dump();
+        }
+
+        if (op == "session.create") {
+            Session s;
+            s.startedAtMs = j.value("startedAtMs", EpochMs{0});
+            s.durationSeconds = j.value("durationSeconds", std::int64_t{0});
+            s.technique = techniqueFromString(j.value("technique", std::string{"breath"}));
+            s.patternId = j.value("patternId", PatternId{0});
+            s.moodBefore = moodField(j, "moodBefore");
+            s.moodAfter = moodField(j, "moodAfter");
+            s.notes = j.value("notes", std::string{});
+            if (s.durationSeconds <= 0) return err("durationSeconds must be > 0").dump();
+            const SessionId id = mStore.createSession(std::move(s));
+            return json{{"ok", true}, {"session", sessionToJson(*mStore.session(id))}}.dump();
+        }
+
+        if (op == "session.update") {
+            const auto existing = mStore.session(j.value("id", SessionId{0}));
+            if (!existing) return err("session not found").dump();
+            Session s = *existing;
+            if (j.contains("startedAtMs")) s.startedAtMs = j["startedAtMs"].get<EpochMs>();
+            if (j.contains("durationSeconds")) s.durationSeconds = j["durationSeconds"].get<std::int64_t>();
+            if (j.contains("technique")) s.technique = techniqueFromString(j["technique"].get<std::string>());
+            if (j.contains("patternId")) s.patternId = j["patternId"].get<PatternId>();
+            if (j.contains("moodBefore")) s.moodBefore = moodField(j, "moodBefore");
+            if (j.contains("moodAfter")) s.moodAfter = moodField(j, "moodAfter");
+            if (j.contains("notes")) s.notes = j["notes"].get<std::string>();
+            mStore.updateSession(s);
+            return json{{"ok", true}, {"session", sessionToJson(*mStore.session(s.id))}}.dump();
+        }
+
+        if (op == "session.remove") {
+            if (!mStore.removeSession(j.value("id", SessionId{0}))) {
+                return err("session not found").dump();
             }
-            return json{{"ok", true},
-                        {"today", today},
-                        {"activeHabits", active},
-                        {"doneToday", doneToday},
-                        {"dueCards", mStore.dueCards(nowMs, std::size_t(-1)).size()},
-                        {"entries", mStore.entries().size()}}.dump();
-        }
-
-        // ------------------------------------------------------- Nawyki
-        if (op == "habit.list") {
-            const bool includeArchived = j.value("includeArchived", false);
-            auto arr = json::array();
-            for (const auto& h : mStore.habits(includeArchived)) arr.push_back(habitToJson(h));
-            return json{{"ok", true}, {"habits", std::move(arr)}}.dump();
-        }
-
-        if (op == "habit.get") {
-            const auto h = mStore.habit(j.value("id", HabitId{0}));
-            if (!h) return err("habit not found").dump();
-            return json{{"ok", true}, {"habit", habitToJson(*h)}}.dump();
-        }
-
-        if (op == "habit.create") {
-            Habit h;
-            h.name = j.value("name", std::string{});
-            h.description = j.value("description", std::string{});
-            h.icon = j.value("icon", std::string{"check"});
-            h.color = j.value("color", std::uint32_t{0xFF4F46E5u});
-            h.daily = j.value("daily", true);
-            h.weekdayMask = static_cast<std::uint8_t>(j.value("weekdayMask", 0x7F));
-            h.createdAtMs = j.value("createdAtMs", EpochMs{0});
-            if (h.name.empty()) return err("name is required").dump();
-            return json{{"ok", true}, {"habit", habitToJson(mStore.createHabit(std::move(h)))}}.dump();
-        }
-
-        if (op == "habit.update") {
-            const auto existing = mStore.habit(j.value("id", HabitId{0}));
-            if (!existing) return err("habit not found").dump();
-            Habit h = *existing;
-            if (j.contains("name")) h.name = j["name"].get<std::string>();
-            if (j.contains("description")) h.description = j["description"].get<std::string>();
-            if (j.contains("icon")) h.icon = j["icon"].get<std::string>();
-            if (j.contains("color")) h.color = j["color"].get<std::uint32_t>();
-            if (j.contains("daily")) h.daily = j["daily"].get<bool>();
-            if (j.contains("weekdayMask")) h.weekdayMask = static_cast<std::uint8_t>(j["weekdayMask"].get<unsigned>());
-            if (j.contains("archived")) h.archived = j["archived"].get<bool>();
-            mStore.updateHabit(h);
-            return json{{"ok", true}, {"habit", habitToJson(h)}}.dump();
-        }
-
-        if (op == "habit.archive") {
-            const bool ok = mStore.setHabitArchived(j.value("id", HabitId{0}),
-                                                    j.value("archived", true));
-            if (!ok) return err("habit not found").dump();
             return okJson().dump();
         }
 
-        if (op == "habit.setCompleted") {
-            const bool ok = mStore.setCompleted(j.value("id", HabitId{0}),
-                                                j.value("day", DayNumber{0}),
-                                                j.value("done", true));
-            if (!ok) return err("habit not found").dump();
-            return okJson().dump();
-        }
-
-        if (op == "habit.stats") {
-            const HabitId id = j.value("id", HabitId{0});
-            if (!mStore.habit(id)) return err("habit not found").dump();
-            const DayNumber today = j.value("today", DayNumber{0});
-            return json{{"ok", true},
-                        {"currentStreak", mStore.currentStreak(id, today)},
-                        {"longestStreak", mStore.longestStreak(id)},
-                        {"doneToday", mStore.isCompleted(id, today)}}.dump();
-        }
-
-        // ------------------------------------------------------- Dziennik
-        if (op == "journal.list") {
+        // -------------------------------------------------- Wzorce oddechu
+        if (op == "pattern.list") {
             auto arr = json::array();
-            for (const auto& e : mStore.entries()) arr.push_back(entryToJson(e));
-            return json{{"ok", true}, {"entries", std::move(arr)}}.dump();
+            for (const auto& p : mStore.patterns()) arr.push_back(patternToJson(p));
+            return json{{"ok", true}, {"patterns", std::move(arr)}}.dump();
         }
 
-        if (op == "journal.get") {
-            const auto e = mStore.entry(j.value("id", EntryId{0}));
-            if (!e) return err("entry not found").dump();
-            return json{{"ok", true}, {"entry", entryToJson(*e)}}.dump();
+        if (op == "pattern.create") {
+            BreathingPattern p;
+            p.name = j.value("name", std::string{});
+            p.inhaleSeconds = j.value("inhaleSeconds", 4);
+            p.holdInSeconds = j.value("holdInSeconds", 0);
+            p.exhaleSeconds = j.value("exhaleSeconds", 4);
+            p.holdOutSeconds = j.value("holdOutSeconds", 0);
+            if (p.name.empty()) return err("name is required").dump();
+            if (p.inhaleSeconds <= 0 || p.exhaleSeconds <= 0) {
+                return err("inhaleSeconds and exhaleSeconds must be > 0").dump();
+            }
+            const PatternId id = mStore.createPattern(std::move(p));
+            return json{{"ok", true}, {"pattern", patternToJson(*mStore.pattern(id))}}.dump();
         }
 
-        if (op == "journal.create") {
-            JournalEntry e;
-            e.title = j.value("title", std::string{});
-            e.body = j.value("body", std::string{});
-            e.mood = static_cast<Mood>(j.value("mood", 3));
-            e.createdAtMs = j.value("createdAtMs", EpochMs{0});
-            e.editedAtMs = j.value("editedAtMs", EpochMs{0});
-            const EntryId id = mStore.createEntry(std::move(e));
-            return json{{"ok", true}, {"entry", entryToJson(*mStore.entry(id))}}.dump();
+        if (op == "pattern.update") {
+            const auto existing = mStore.pattern(j.value("id", PatternId{0}));
+            if (!existing) return err("pattern not found").dump();
+            BreathingPattern p = *existing;
+            if (j.contains("name")) p.name = j["name"].get<std::string>();
+            if (j.contains("inhaleSeconds")) p.inhaleSeconds = j["inhaleSeconds"].get<std::int32_t>();
+            if (j.contains("holdInSeconds")) p.holdInSeconds = j["holdInSeconds"].get<std::int32_t>();
+            if (j.contains("exhaleSeconds")) p.exhaleSeconds = j["exhaleSeconds"].get<std::int32_t>();
+            if (j.contains("holdOutSeconds")) p.holdOutSeconds = j["holdOutSeconds"].get<std::int32_t>();
+            mStore.updatePattern(p);
+            return json{{"ok", true}, {"pattern", patternToJson(*mStore.pattern(p.id))}}.dump();
         }
 
-        if (op == "journal.update") {
-            const auto existing = mStore.entry(j.value("id", EntryId{0}));
-            if (!existing) return err("entry not found").dump();
-            JournalEntry e = *existing;
-            if (j.contains("title")) e.title = j["title"].get<std::string>();
-            if (j.contains("body")) e.body = j["body"].get<std::string>();
-            if (j.contains("mood")) e.mood = static_cast<Mood>(j["mood"].get<int>());
-            if (j.contains("editedAtMs")) e.editedAtMs = j["editedAtMs"].get<EpochMs>();
-            mStore.updateEntry(e);
-            return json{{"ok", true}, {"entry", entryToJson(*mStore.entry(e.id))}}.dump();
-        }
-
-        if (op == "journal.remove") {
-            if (!mStore.removeEntry(j.value("id", EntryId{0}))) return err("entry not found").dump();
+        if (op == "pattern.remove") {
+            if (!mStore.removePattern(j.value("id", PatternId{0}))) {
+                return err("pattern not found or builtin").dump();
+            }
             return okJson().dump();
-        }
-
-        // ------------------------------------------------------ Nauka (SRS)
-        if (op == "card.list") {
-            auto arr = json::array();
-            for (const auto& c : mStore.cards()) arr.push_back(cardToJson(c));
-            return json{{"ok", true}, {"cards", std::move(arr)}}.dump();
-        }
-
-        if (op == "card.get") {
-            const auto c = mStore.card(j.value("id", CardId{0}));
-            if (!c) return err("card not found").dump();
-            return json{{"ok", true}, {"card", cardToJson(*c)}}.dump();
-        }
-
-        if (op == "card.create") {
-            Card c;
-            c.deck = j.value("deck", std::string{});
-            c.front = j.value("front", std::string{});
-            c.back = j.value("back", std::string{});
-            if (c.front.empty() || c.back.empty()) return err("front and back are required").dump();
-            const CardId id = mStore.createCard(std::move(c));
-            return json{{"ok", true}, {"card", cardToJson(*mStore.card(id))}}.dump();
-        }
-
-        if (op == "card.update") {
-            const auto existing = mStore.card(j.value("id", CardId{0}));
-            if (!existing) return err("card not found").dump();
-            Card c = *existing;
-            if (j.contains("deck")) c.deck = j["deck"].get<std::string>();
-            if (j.contains("front")) c.front = j["front"].get<std::string>();
-            if (j.contains("back")) c.back = j["back"].get<std::string>();
-            mStore.updateCard(c);
-            return json{{"ok", true}, {"card", cardToJson(*mStore.card(c.id))}}.dump();
-        }
-
-        if (op == "card.remove") {
-            if (!mStore.removeCard(j.value("id", CardId{0}))) return err("card not found").dump();
-            return okJson().dump();
-        }
-
-        if (op == "card.review") {
-            const CardId id = j.value("id", CardId{0});
-            const int quality = j.value("quality", 0);
-            const EpochMs nowMs = j.value("nowMs", EpochMs{0});
-            const auto updated = mStore.review(id, quality, nowMs);
-            if (!updated) return err("card not found").dump();
-            return json{{"ok", true}, {"card", cardToJson(*updated)}}.dump();
-        }
-
-        if (op == "card.due") {
-            const EpochMs nowMs = j.value("nowMs", EpochMs{0});
-            const std::size_t limit = j.value("limit", std::size_t{50});
-            auto arr = json::array();
-            for (const auto& c : mStore.dueCards(nowMs, limit)) arr.push_back(cardToJson(c));
-            return json{{"ok", true}, {"cards", std::move(arr)}}.dump();
         }
     } catch (const std::exception& e) {
         return err(std::string("command failed: ") + e.what()).dump();

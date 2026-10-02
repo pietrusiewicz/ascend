@@ -1,4 +1,4 @@
-// Testy magazynu: nadawanie id, aktualizacja, archiwizacja, ukończenia, SRS.
+// Testy magazynu: sesje, wzorce oddechu, statystyki.
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include <gtest/gtest.h>
 
@@ -6,95 +6,102 @@
 
 using namespace ascend;
 
-TEST(Store, HabitIdAssignment) {
+TEST(Store, SessionIdAssignment) {
     Store s;
-    Habit a;
-    a.name = "a";
-    Habit b;
-    b.name = "b";
-    EXPECT_EQ(s.createHabit(a).id, HabitId{1});
-    EXPECT_EQ(s.createHabit(b).id, HabitId{2});
+    Session a;
+    a.startedAtMs = 1;
+    a.durationSeconds = 60;
+    Session b;
+    b.startedAtMs = 2;
+    b.durationSeconds = 60;
+    EXPECT_EQ(s.createSession(a), SessionId{1});
+    EXPECT_EQ(s.createSession(b), SessionId{2});
 }
 
-TEST(Store, HabitUpdateAndArchive) {
+TEST(Store, SessionsSortedDescByStart) {
     Store s;
-    Habit h = s.createHabit(Habit{});
-    h.name = "x";
-    EXPECT_TRUE(s.updateHabit(h));
-    ASSERT_TRUE(s.habit(h.id).has_value());
-    EXPECT_EQ(s.habit(h.id)->name, "x");
+    Session a;
+    a.startedAtMs = 100;
+    a.durationSeconds = 10;
+    Session b;
+    b.startedAtMs = 200;
+    b.durationSeconds = 10;
+    Session c;
+    c.startedAtMs = 300;
+    c.durationSeconds = 10;
+    s.createSession(a);
+    s.createSession(c);
+    s.createSession(b);
 
-    Habit unknown;
-    unknown.id = 999;
-    EXPECT_FALSE(s.updateHabit(unknown));
-
-    EXPECT_TRUE(s.setHabitArchived(h.id, true));
-    EXPECT_TRUE(s.habit(h.id)->archived);
-    EXPECT_TRUE(s.habits(false).empty());
-    EXPECT_EQ(s.habits(true).size(), 1u);
+    const auto out = s.sessions();
+    ASSERT_EQ(out.size(), 3u);
+    EXPECT_EQ(out[0].startedAtMs, EpochMs{300});
+    EXPECT_EQ(out[1].startedAtMs, EpochMs{200});
+    EXPECT_EQ(out[2].startedAtMs, EpochMs{100});
 }
 
-TEST(Store, CompletionsAreIdempotent) {
+TEST(Store, SessionUpdateAndRemove) {
     Store s;
-    const Habit h = s.createHabit(Habit{});
+    Session x;
+    x.startedAtMs = 1;
+    x.durationSeconds = 30;
+    const SessionId id = s.createSession(x);
 
-    EXPECT_TRUE(s.setCompleted(h.id, 5, true));
-    EXPECT_TRUE(s.isCompleted(h.id, 5));
-    EXPECT_TRUE(s.setCompleted(h.id, 5, true));  // ponownie → bez duplikatu
-    EXPECT_EQ(s.completions(h.id).size(), 1u);
+    Session u = *s.session(id);
+    u.durationSeconds = 90;
+    u.notes = "spokój";
+    EXPECT_TRUE(s.updateSession(u));
+    ASSERT_TRUE(s.session(id).has_value());
+    EXPECT_EQ(s.session(id)->durationSeconds, 90);
+    EXPECT_EQ(s.session(id)->notes, "spokój");
 
-    EXPECT_TRUE(s.setCompleted(h.id, 5, false));
-    EXPECT_FALSE(s.isCompleted(h.id, 5));
-    EXPECT_EQ(s.completions(h.id).size(), 0u);
-
-    EXPECT_FALSE(s.setCompleted(999, 5, true));  // nieznany nawyk
+    EXPECT_TRUE(s.removeSession(id));
+    EXPECT_FALSE(s.session(id).has_value());
+    EXPECT_FALSE(s.updateSession(u));
 }
 
-TEST(Store, DueCardsSortedByDueDate) {
+TEST(Store, PatternsIncludeBuiltinsFirst) {
     Store s;
-
-    Card a;
-    a.front = "a";
-    a.back = "1";
-    a.dueMs = 100;
-    Card b;
-    b.front = "b";
-    b.back = "2";
-    b.dueMs = 50;
-    Card c;
-    c.front = "c";
-    c.back = "3";
-    c.dueMs = 500;
-    s.createCard(a);
-    s.createCard(b);
-    s.createCard(c);
-
-    const auto due = s.dueCards(100, 10);
-    ASSERT_EQ(due.size(), 2u);
-    EXPECT_EQ(due[0].front, "b");  // najwcześniejszy termin pierwszy
-    EXPECT_EQ(due[1].front, "a");
+    const auto all = s.patterns();
+    ASSERT_GE(all.size(), 4u);
+    EXPECT_TRUE(all[0].builtin);
+    EXPECT_EQ(all[0].id, PatternId{1});
 }
 
-TEST(Store, ReviewUnknownCard) {
+TEST(Store, CustomPatternLifecycle) {
     Store s;
-    EXPECT_FALSE(s.review(1, 4, 0).has_value());
+    BreathingPattern p;
+    p.name = "Mój rytm";
+    p.inhaleSeconds = 3;
+    p.exhaleSeconds = 6;
+    const PatternId id = s.createPattern(p);
+    EXPECT_GE(id, PatternId{100});
+    ASSERT_TRUE(s.pattern(id).has_value());
+    EXPECT_FALSE(s.pattern(id)->builtin);
+
+    // update
+    BreathingPattern u = *s.pattern(id);
+    u.exhaleSeconds = 7;
+    EXPECT_TRUE(s.updatePattern(u));
+    EXPECT_EQ(s.pattern(id)->exhaleSeconds, 7);
+
+    // wbudowanych nie można usunąć
+    EXPECT_FALSE(s.removePattern(1));
+    // własny usuwa się
+    EXPECT_TRUE(s.removePattern(id));
+    EXPECT_FALSE(s.pattern(id).has_value());
 }
 
-TEST(Store, CardUpdateAndRemove) {
+TEST(Store, StatsDelegatesToComputeStats) {
     Store s;
-    Card c;
-    c.front = "f";
-    c.back = "b";
-    const CardId id = s.createCard(c);
+    Session a;
+    a.startedAtMs = kMillisPerDay;
+    a.durationSeconds = 60;
+    s.createSession(a);
 
-    Card u;
-    u.id = id;
-    u.front = "f2";
-    u.back = "b";
-    EXPECT_TRUE(s.updateCard(u));
-    ASSERT_TRUE(s.card(id).has_value());
-    EXPECT_EQ(s.card(id)->front, "f2");
-
-    EXPECT_TRUE(s.removeCard(id));
-    EXPECT_FALSE(s.card(id).has_value());
+    const DayNumber today = dayNumberUtc(kMillisPerDay);
+    const MeditationStats st = s.stats(today);
+    EXPECT_EQ(st.totalSessions, 1);
+    EXPECT_EQ(st.streakDays, 1);
+    EXPECT_EQ(st.secondsToday, 60);
 }

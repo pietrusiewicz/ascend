@@ -2,44 +2,54 @@
 <resources>
     <string name="app_name">Ascend</string>
 
-    <string name="tab_home">Today</string>
-    <string name="tab_habits">Habits</string>
+    <string name="tab_meditate">Meditate</string>
     <string name="tab_journal">Journal</string>
-    <string name="tab_learn">Learn</string>
+    <string name="tab_stats">Stats</string>
 
-    <string name="home_title">Today</string>
-    <string name="overview_habits">Active habits</string>
-    <string name="overview_done">Done today</string>
-    <string name="overview_due">Cards due</string>
-    <string name="overview_entries">Journal entries</string>
+    <!-- Medytacja -->
+    <string name="meditate_title">Meditate</string>
+    <string name="meditate_start">Start</string>
+    <string name="meditate_stop">Stop</string>
+    <string name="meditate_pattern">Breathing pattern</string>
+    <string name="meditate_technique">Technique</string>
+    <string name="meditate_duration">Duration (min)</string>
+    <string name="meditate_duration_free">Free (until you stop)</string>
+    <string name="meditate_elapsed">%1$s</string>
+    <string name="meditate_breathe_in">Breathe in</string>
+    <string name="meditate_hold">Hold</string>
+    <string name="meditate_breathe_out">Breathe out</string>
+    <string name="meditate_finish">Finish</string>
+    <string name="meditate_saved">Session saved</string>
+    <string name="meditate_save_title">Save your session</string>
+    <string name="meditate_mood_before">Mood before</string>
+    <string name="meditate_mood_after">Mood after</string>
+    <string name="meditate_notes">Notes</string>
+    <string name="meditate_notes_hint">How do you feel?</string>
 
-    <string name="habits_title">Habits</string>
-    <string name="habits_add">New habit</string>
-    <string name="habits_name">Name</string>
-    <string name="habits_description">Description (optional)</string>
-    <string name="habits_empty">No habits yet. Add your first one!</string>
-    <string name="streak_current">Streak: %1$d</string>
-    <string name="streak_longest">Best: %1$d</string>
+    <!-- Techniki -->
+    <string name="technique_breath">Breath</string>
+    <string name="technique_silence">Silence</string>
+    <string name="technique_body_scan">Body scan</string>
+    <string name="technique_walking">Walking</string>
+    <string name="technique_mantra">Mantra</string>
+    <string name="technique_guided">Guided</string>
 
+    <!-- Dziennik -->
     <string name="journal_title">Journal</string>
-    <string name="journal_add">New entry</string>
-    <string name="journal_title_label">Title</string>
-    <string name="journal_body_label">How was your day?</string>
-    <string name="journal_mood">Mood</string>
-    <string name="journal_empty">No entries yet.</string>
+    <string name="journal_empty">No sessions yet. Meditate and your sessions will appear here.</string>
     <string name="journal_delete">Delete</string>
+    <string name="journal_duration">%1$d min</string>
 
-    <string name="learn_title">Learn</string>
-    <string name="learn_add">New card</string>
-    <string name="learn_deck">Deck</string>
-    <string name="learn_front">Front</string>
-    <string name="learn_back">Back</string>
-    <string name="learn_empty">No cards due right now.</string>
-    <string name="learn_show">Show answer</string>
-    <string name="learn_again">Again</string>
-    <string name="learn_hard">Hard</string>
-    <string name="learn_good">Good</string>
-    <string name="learn_easy">Easy</string>
+    <!-- Statystyki -->
+    <string name="stats_title">Stats</string>
+    <string name="stats_streak">Current streak</string>
+    <string name="stats_streak_days">%1$d days</string>
+    <string name="stats_longest">Longest streak</string>
+    <string name="stats_total_sessions">Sessions</string>
+    <string name="stats_total_time">Total time</string>
+    <string name="stats_today">Today</string>
+    <string name="stats_today_sessions">%1$d sessions</string>
+    <string name="stats_minutes">%1$d min</string>
 
     <string name="mood_awful">Awful</string>
     <string name="mood_bad">Bad</string>

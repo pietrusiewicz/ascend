@@ -41,70 +41,44 @@ class AscendRepository(context: Context) {
         return o
     }
 
-    // ----- Nawyki ---------------------------------------------------------
+    // ----- Sesje -----------------------------------------------------------
 
-    fun listHabits(): JSONArray =
-        command(obj("op" to "habit.list").toString()).optJSONArray("habits") ?: JSONArray()
+    fun listSessions(): JSONArray =
+        command("""{"op":"session.list"}""").optJSONArray("sessions") ?: JSONArray()
 
-    fun habitStats(id: Long, today: Long): JSONObject =
-        command(obj("op" to "habit.stats", "id" to id, "today" to today).toString())
-
-    fun createHabit(name: String, description: String) {
-        exec(
-            obj(
-                "op" to "habit.create",
-                "name" to name,
-                "description" to description,
-                "icon" to "check",
-                "daily" to true,
-                "weekdayMask" to 0x7F,
-            ).toString()
+    fun createSession(
+        startedAtMs: Long,
+        durationSeconds: Long,
+        technique: String,
+        patternId: Long,
+        moodBefore: Int?,
+        moodAfter: Int?,
+        notes: String,
+    ) {
+        val o = obj(
+            "op" to "session.create",
+            "startedAtMs" to startedAtMs,
+            "durationSeconds" to durationSeconds,
+            "technique" to technique,
+            "patternId" to patternId,
+            "notes" to notes,
         )
+        if (moodBefore != null) o.put("moodBefore", moodBefore)
+        if (moodAfter != null) o.put("moodAfter", moodAfter)
+        exec(o.toString())
     }
 
-    fun setCompleted(id: Long, day: Long, done: Boolean) {
-        exec(obj("op" to "habit.setCompleted", "id" to id, "day" to day, "done" to done).toString())
+    fun removeSession(id: Long) {
+        exec(obj("op" to "session.remove", "id" to id).toString())
     }
 
-    fun overview(today: Long): JSONObject =
-        command(obj("op" to "overview", "today" to today).toString())
+    // ----- Wzorce oddechu ----------------------------------------------------
 
-    // ----- Dziennik --------------------------------------------------------
+    fun listPatterns(): JSONArray =
+        command("""{"op":"pattern.list"}""").optJSONArray("patterns") ?: JSONArray()
 
-    fun listEntries(): JSONArray =
-        command("""{"op":"journal.list"}""").optJSONArray("entries") ?: JSONArray()
+    // ----- Statystyki --------------------------------------------------------
 
-    fun createEntry(title: String, body: String, mood: Int, createdAtMs: Long) {
-        exec(
-            obj(
-                "op" to "journal.create",
-                "title" to title,
-                "body" to body,
-                "mood" to mood,
-                "createdAtMs" to createdAtMs,
-            ).toString()
-        )
-    }
-
-    fun removeEntry(id: Long) {
-        exec(obj("op" to "journal.remove", "id" to id).toString())
-    }
-
-    // ----- Nauka (SRS) -----------------------------------------------------
-
-    fun dueCards(nowMs: Long, limit: Int): JSONArray =
-        command(obj("op" to "card.due", "nowMs" to nowMs, "limit" to limit).toString())
-            .optJSONArray("cards") ?: JSONArray()
-
-    fun createCard(deck: String, front: String, back: String) {
-        exec(obj("op" to "card.create", "deck" to deck, "front" to front, "back" to back).toString())
-    }
-
-    fun reviewCard(id: Long, quality: Int, nowMs: Long) {
-        exec(obj("op" to "card.review", "id" to id, "quality" to quality, "nowMs" to nowMs).toString())
-    }
-
-    fun removeCard(id: Long) {
-        exec(obj("op" to "card.remove", "id" to id).toString())
-    }
+    fun stats(today: Long): JSONObject =
+        command(obj("op" to "stats", "today" to today).toString())
 }

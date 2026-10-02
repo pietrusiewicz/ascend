@@ -1,4 +1,4 @@
-// Ascend — serializacja do/z JSON (format zapisu v1).
+// Ascend — serializacja do/z JSON (format zapisu v2).
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
@@ -12,11 +12,14 @@
 namespace ascend {
 
 // Konwertery pojedynczych encji (współdzielone przez snapshot i kanał poleceń).
-nlohmann::json habitToJson(const Habit& h);
-nlohmann::json entryToJson(const JournalEntry& e);
-nlohmann::json cardToJson(const Card& c);
+nlohmann::json sessionToJson(const Session& s);
+nlohmann::json patternToJson(const BreathingPattern& p);
 
-// Zwraca pełny zrzut stanu jako JSON ({"schema":1, ...}).
+// Zamienia nazwę techniki na string snake_case ("breath", "silence", ...).
+std::string techniqueToString(Technique t);
+Technique techniqueFromString(std::string_view s);
+
+// Zwraca pełny zrzut stanu jako JSON ({"schema":2, ...}).
 std::string storeToJson(const Store& store);
 
 // Wczytuje stan z JSON. Przy sukcesie zwraca true i nadpisuje `store`;

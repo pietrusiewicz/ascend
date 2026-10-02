@@ -8,7 +8,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 add_library(ascend_core STATIC
-        src/srs.cpp
+        src/stats.cpp
         src/store.cpp
         src/json_io.cpp
         src/facade.cpp)

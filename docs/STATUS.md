@@ -2,14 +2,16 @@
 
 ## Gotowe
 
-- Przenośny rdzeń C++23: nawyki, dziennik, nauka (SM-2), magazyn, JSON, fasada.
+- Przenośny rdzeń C++23: sesje medytacji, wzorce oddechu, statystyki (passa),
+  magazyn, JSON, fasada z kanałem poleceń.
 - Mostek JNI (`libascend_bridge.so`) — kanał poleceń JSON + snapshot.
-- Testy jednostkowe hosta (31 testów, GoogleTest).
-- Warstwa Android: Kotlin + Compose, 4 ekrany, i18n PL/EN.
-- Build APK (debug/release) przez Gradle.
+- Testy jednostkowe hosta (28 testów, GoogleTest).
+- Warstwa Android: Kotlin + Compose, 3 ekrany (Medytuj / Dziennik / Statystyki),
+  prowadzenie oddechu z animacją, i18n PL/EN.
+- Build APK (debug/release) przez Gradle; wydanie podpisane kluczem release.
 
 ## W trakcie / plan
 
-- Wystawienie w sklepie z aplikacjami serwisu Beginner3D.
-- Ikony/grafika marki, ewentualne zrzuty ekranu do sklepu.
-- Podpisywanie wydań produkcyjnych (keystore) i auto-update wersji.
+- Zrzuty ekranu do sklepu (opcjonalnie).
+- Dzwonek na koniec sesji (obecnie tylko timer; dźwięk w warstwie platformowej).
+- Auto-aktualizacja wersji / historia wydań.

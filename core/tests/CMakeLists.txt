@@ -8,9 +8,8 @@ ascend_add_googletest()
 
 add_executable(ascend_core_tests
         test_main.cpp
-        test_habit.cpp
-        test_journal.cpp
-        test_srs.cpp
+        test_session.cpp
+        test_stats.cpp
         test_store.cpp
         test_json_io.cpp
         test_facade.cpp)

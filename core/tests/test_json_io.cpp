@@ -1,4 +1,4 @@
-// Testy serializacji magazynu do/z JSON (format zapisu v1).
+// Testy serializacji magazynu do/z JSON (format zapisu v2).
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include <gtest/gtest.h>
 
@@ -14,34 +14,23 @@ namespace {
 Store makeSample() {
     Store s;
 
-    Habit h;
-    h.name = "Read";
-    h.icon = "book";
-    h.color = 0xFF00FF00u;
-    h.daily = false;
-    h.weekdayMask = 0b0001010;
-    h.createdAtMs = 12345;
-    s.createHabit(h);
-    s.setCompleted(1, 100, true);
-    s.setCompleted(1, 101, true);
+    Session a;
+    a.startedAtMs = 12345;
+    a.durationSeconds = 600;
+    a.technique = Technique::BodyScan;
+    a.patternId = 0;
+    a.moodBefore = Mood::Bad;
+    a.moodAfter = Mood::Good;
+    a.notes = "relaks";
+    s.createSession(a);
 
-    JournalEntry e;
-    e.title = "Day 1";
-    e.body = "hello";
-    e.mood = Mood::Great;
-    e.createdAtMs = 999;
-    s.createEntry(e);
-
-    Card c;
-    c.deck = "eng";
-    c.front = "kot";
-    c.back = "cat";
-    c.dueMs = 123;
-    c.intervalDays = 3.5;
-    c.ease = 2.4;
-    c.repetitions = 2;
-    c.lapses = 1;
-    s.createCard(c);
+    BreathingPattern p;
+    p.name = "Własny";
+    p.inhaleSeconds = 3;
+    p.holdInSeconds = 1;
+    p.exhaleSeconds = 5;
+    p.holdOutSeconds = 0;
+    s.createPattern(p);
 
     return s;
 }
@@ -57,9 +46,8 @@ TEST(JsonIo, RoundTripIsStable) {
     ASSERT_TRUE(storeFromJson(json, t, err)) << err;
 
     EXPECT_EQ(storeToJson(t), json);
-    EXPECT_EQ(t.nextHabitId, s.nextHabitId);
-    EXPECT_EQ(t.nextEntryId, s.nextEntryId);
-    EXPECT_EQ(t.nextCardId, s.nextCardId);
+    EXPECT_EQ(t.nextSessionId, s.nextSessionId);
+    EXPECT_EQ(t.nextPatternId, s.nextPatternId);
 }
 
 TEST(JsonIo, RoundTripPreservesFields) {
@@ -68,23 +56,19 @@ TEST(JsonIo, RoundTripPreservesFields) {
     std::string err;
     ASSERT_TRUE(storeFromJson(storeToJson(s), t, err)) << err;
 
-    ASSERT_EQ(t.habitsRaw().size(), 1u);
-    EXPECT_EQ(t.habitsRaw()[0].name, "Read");
-    EXPECT_EQ(t.habitsRaw()[0].icon, "book");
-    EXPECT_EQ(t.habitsRaw()[0].color, 0xFF00FF00u);
-    EXPECT_EQ(t.habitsRaw()[0].weekdayMask, 0b0001010);
-    EXPECT_EQ(t.habitsRaw()[0].createdAtMs, 12345);
+    ASSERT_EQ(t.sessionsRaw().size(), 1u);
+    EXPECT_EQ(t.sessionsRaw()[0].technique, Technique::BodyScan);
+    EXPECT_EQ(t.sessionsRaw()[0].durationSeconds, 600);
+    ASSERT_TRUE(t.sessionsRaw()[0].moodBefore.has_value());
+    EXPECT_EQ(*t.sessionsRaw()[0].moodBefore, Mood::Bad);
+    ASSERT_TRUE(t.sessionsRaw()[0].moodAfter.has_value());
+    EXPECT_EQ(*t.sessionsRaw()[0].moodAfter, Mood::Good);
+    EXPECT_EQ(t.sessionsRaw()[0].notes, "relaks");
 
-    ASSERT_EQ(t.completionsRaw().size(), 2u);
-
-    ASSERT_EQ(t.entriesRaw().size(), 1u);
-    EXPECT_EQ(t.entriesRaw()[0].title, "Day 1");
-    EXPECT_EQ(t.entriesRaw()[0].mood, Mood::Great);
-
-    ASSERT_EQ(t.cardsRaw().size(), 1u);
-    EXPECT_DOUBLE_EQ(t.cardsRaw()[0].intervalDays, 3.5);
-    EXPECT_DOUBLE_EQ(t.cardsRaw()[0].ease, 2.4);
-    EXPECT_EQ(t.cardsRaw()[0].repetitions, 2);
+    ASSERT_EQ(t.patternsRaw().size(), 1u);
+    EXPECT_EQ(t.patternsRaw()[0].name, "Własny");
+    EXPECT_EQ(t.patternsRaw()[0].inhaleSeconds, 3);
+    EXPECT_EQ(t.patternsRaw()[0].holdInSeconds, 1);
 }
 
 TEST(JsonIo, RejectsUnsupportedSchema) {
@@ -105,7 +89,13 @@ TEST(JsonIo, BumpsNextIdsFromContent) {
     Store t;
     std::string err;
     ASSERT_TRUE(storeFromJson(
-        R"({"habits":[{"id":7,"name":"x"}],"journal":[],"cards":[]})", t, err))
+        R"({"sessions":[{"id":7,"startedAtMs":1,"durationSeconds":60}],"patterns":[]})", t, err))
         << err;
-    EXPECT_GE(t.nextHabitId, HabitId{8});
+    EXPECT_GE(t.nextSessionId, SessionId{8});
+}
+
+TEST(JsonIo, TechniqueStringRoundTrip) {
+    EXPECT_EQ(techniqueToString(techniqueFromString("silence")), "silence");
+    EXPECT_EQ(techniqueToString(techniqueFromString("body_scan")), "body_scan");
+    EXPECT_EQ(techniqueFromString("nieznane"), Technique::Breath);
 }

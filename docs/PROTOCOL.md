@@ -4,6 +4,7 @@ Fasada rdzenia przyjmuje obiekt JSON z polem `op` i zwraca obiekt JSON
 z polem `ok` (true/false). Błędy zwracają `{"ok": false, "error": "..."}`.
 
 Identyfikatory są `uint64`, czas w ms epoki Unix (UTC), dzień = `ms / 86_400_000`.
+Technika to string: `breath`, `silence`, `body_scan`, `walking`, `mantra`, `guided`.
 
 ## Metainformacje
 
@@ -11,55 +12,40 @@ Identyfikatory są `uint64`, czas w ms epoki Unix (UTC), dzień = `ms / 86_400_0
 |----|---------|-------|
 | `ping` | — | `{pong:true}` |
 | `version` | — | `{version, protocol, schema}` |
-| `overview` | `today` (dzień) | `{activeHabits, doneToday, dueCards, entries}` |
+| `stats` | `today` (dzień) | `{streakDays, longestStreak, totalSessions, totalSeconds, sessionsToday, secondsToday}` |
+| `overview` | `today` | alias dla `stats` |
 
-## Nawyki
-
-| op | wejście | wynik |
-|----|---------|-------|
-| `habit.list` | `includeArchived?` | `{habits:[...]}` |
-| `habit.get` | `id` | `{habit:{...}}` |
-| `habit.create` | `name`, `description?`, `icon?`, `color?`, `daily?`, `weekdayMask?`, `createdAtMs?` | `{habit:{...}}` |
-| `habit.update` | `id` + dowolne pola | `{habit:{...}}` |
-| `habit.archive` | `id`, `archived` | `{ok}` |
-| `habit.setCompleted` | `id`, `day`, `done` | `{ok}` |
-| `habit.stats` | `id`, `today` | `{currentStreak, longestStreak, doneToday}` |
-
-Kształt `habit`: `{id, name, description, icon, color, daily, weekdayMask, createdAtMs, archived}`.
-`weekdayMask`: bity 0–6 = poniedziałek–niedziela (gdy `daily=false`).
-
-## Dziennik
+## Sesje
 
 | op | wejście | wynik |
 |----|---------|-------|
-| `journal.list` | — | `{entries:[...]}` (malejąco wg czasu) |
-| `journal.get` | `id` | `{entry:{...}}` |
-| `journal.create` | `title`, `body?`, `mood?` (1–5), `createdAtMs?` | `{entry:{...}}` |
-| `journal.update` | `id` + dowolne pola | `{entry:{...}}` |
-| `journal.remove` | `id` | `{ok}` |
+| `session.list` | — | `{sessions:[...]}` (malejąco wg `startedAtMs`) |
+| `session.get` | `id` | `{session:{...}}` |
+| `session.create` | `startedAtMs`, `durationSeconds` (>0), `technique?`, `patternId?`, `moodBefore?` (1–5), `moodAfter?` (1–5), `notes?` | `{session:{...}}` |
+| `session.update` | `id` + dowolne pola | `{session:{...}}` |
+| `session.remove` | `id` | `{ok}` |
 
-Kształt `entry`: `{id, createdAtMs, editedAtMs, title, body, mood}`.
+Kształt `session`: `{id, startedAtMs, durationSeconds, technique, patternId, notes, moodBefore?, moodAfter?}`
+(`moodBefore`/`moodAfter` obecne tylko, gdy ustawione).
 
-## Nauka (SM-2)
+## Wzorce oddechu
 
 | op | wejście | wynik |
 |----|---------|-------|
-| `card.list` | — | `{cards:[...]}` |
-| `card.get` | `id` | `{card:{...}}` |
-| `card.create` | `deck?`, `front`, `back` | `{card:{...}}` |
-| `card.update` | `id` + `deck?`/`front?`/`back?` | `{card:{...}}` |
-| `card.remove` | `id` | `{ok}` |
-| `card.review` | `id`, `quality` (0–5), `nowMs` | `{card:{...}}` (zaktualizowana) |
-| `card.due` | `nowMs`, `limit?` | `{cards:[...]}` (dueMs ≤ nowMs, rosnąco) |
+| `pattern.list` | — | `{patterns:[...]}` (wbudowane najpierw, potem własne) |
+| `pattern.create` | `name`, `inhaleSeconds` (>0), `exhaleSeconds` (>0), `holdInSeconds?`, `holdOutSeconds?` | `{pattern:{...}}` |
+| `pattern.update` | `id` + dowolne pola | `{pattern:{...}}` |
+| `pattern.remove` | `id` | `{ok}` (wbudowanych nie usuwamy) |
 
-Kształt `card`: `{id, deck, front, back, dueMs, intervalDays, ease, repetitions, lapses}`.
+Kształt `pattern`: `{id, name, inhaleSeconds, holdInSeconds, exhaleSeconds, holdOutSeconds, builtin}`.
+Wbudowane mają `id` 1–4 i `builtin:true`; własne `id ≥ 100`.
 
-## Snapshot (format zapisu v1)
+## Snapshot (format zapisu v2)
 
 ```json
 {
-  "schema": 1, "protocol": 1,
-  "nextHabitId": 1, "nextEntryId": 1, "nextCardId": 1,
-  "habits": [], "completions": [], "journal": [], "cards": []
+  "schema": 2, "protocol": 2,
+  "nextSessionId": 1, "nextPatternId": 100,
+  "sessions": [], "patterns": []
 }
 ```

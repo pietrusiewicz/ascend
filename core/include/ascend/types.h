@@ -11,23 +11,22 @@
 namespace ascend {
 
 // Identyfikatory encji (monotonicznie rosnące w obrębie jednego magazynu).
-using HabitId = std::uint64_t;
-using EntryId = std::uint64_t;
-using CardId = std::uint64_t;
+using SessionId = std::uint64_t;
+using PatternId = std::uint64_t;
 
 // Czas w milisekundach od epoki Unix (UTC).
 using EpochMs = std::int64_t;
 
-// Numer dnia od epoki Unix (UTC) — używany do „dni" w nawykach (streak'i).
+// Numer dnia od epoki Unix (UTC) — używany do liczenia „dni" (passa medytacji).
 using DayNumber = std::int64_t;
 
 constexpr std::int64_t kMillisPerDay = 86'400'000;
 
 // Wersja protokołu kanału sterującego (JNI command) oraz formatu zapisu.
-constexpr std::int32_t kProtocolVersion = 1;
-constexpr std::int32_t kSaveSchemaVersion = 1;
+constexpr std::int32_t kProtocolVersion = 2;
+constexpr std::int32_t kSaveSchemaVersion = 2;
 
-// Nastrój wpisu dziennika (1..5).
+// Nastrój (1..5) — używany przed/po sesji medytacji.
 enum class Mood : std::int32_t {
     Awful = 1,
     Bad = 2,
@@ -36,16 +35,14 @@ enum class Mood : std::int32_t {
     Great = 5,
 };
 
-// Dzień tygodnia (indeks 0..6, ISO-8601: 0 = poniedziałek, 6 = niedziela).
-// Używany w masce bitowej harmonogramu nawyku.
-enum class Weekday : std::int32_t {
-    Monday = 0,
-    Tuesday = 1,
-    Wednesday = 2,
-    Thursday = 3,
-    Friday = 4,
-    Saturday = 5,
-    Sunday = 6,
+// Technika medytacji. W JSON jako string (snake_case).
+enum class Technique : std::int32_t {
+    Breath = 0,    // oddech (wzorzec oddechu)
+    Silence = 1,   // cisza
+    BodyScan = 2,  // skan ciała
+    Walking = 3,   // medytacja w ruchu
+    Mantra = 4,    // mantra
+    Guided = 5,    // z przewodnikiem
 };
 
 // Konwertuje czas epoki [ms] na numer dnia (UTC). Dla ujemnych wartości

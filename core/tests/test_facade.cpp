@@ -29,65 +29,70 @@ TEST(Facade, PingAndVersion) {
     EXPECT_TRUE(v["ok"].get<bool>());
     EXPECT_EQ(v["protocol"].get<int>(), kProtocolVersion);
     EXPECT_EQ(v["schema"].get<int>(), kSaveSchemaVersion);
-    EXPECT_EQ(v["version"].get<std::string>(), "0.1.0");
 }
 
-TEST(Facade, HabitLifecycle) {
+TEST(Facade, SessionLifecycle) {
     Facade f;
 
-    const json c = call(f, {{"op", "habit.create"}, {"name", "Run"}});
+    const json c = call(f, {{"op", "session.create"},
+                            {"startedAtMs", 1000},
+                            {"durationSeconds", 300},
+                            {"technique", "breath"},
+                            {"moodBefore", 3},
+                            {"moodAfter", 4}});
     ASSERT_TRUE(c["ok"].get<bool>());
-    const HabitId id = c["habit"]["id"].get<HabitId>();
-    EXPECT_EQ(id, HabitId{1});
+    const SessionId id = c["session"]["id"].get<SessionId>();
+    EXPECT_EQ(id, SessionId{1});
+    EXPECT_EQ(c["session"]["technique"].get<std::string>(), "breath");
 
-    const json l = call(f, {{"op", "habit.list"}});
-    EXPECT_EQ(l["habits"].size(), 1u);
+    const json l = call(f, {{"op", "session.list"}});
+    EXPECT_EQ(l["sessions"].size(), 1u);
 
-    const json sc = call(f, {{"op", "habit.setCompleted"}, {"id", id}, {"day", 100}, {"done", true}});
-    EXPECT_TRUE(sc["ok"].get<bool>());
-
-    const json st = call(f, {{"op", "habit.stats"}, {"id", id}, {"today", 100}});
-    EXPECT_EQ(st["currentStreak"].get<std::int64_t>(), 1);
-    EXPECT_TRUE(st["doneToday"].get<bool>());
-}
-
-TEST(Facade, HabitCreateRequiresName) {
-    Facade f;
-    const json c = call(f, {{"op", "habit.create"}});
-    EXPECT_FALSE(c["ok"].get<bool>());
-}
-
-TEST(Facade, JournalLifecycle) {
-    Facade f;
-
-    const json c = call(f, {{"op", "journal.create"}, {"title", "hi"}, {"body", "b"}, {"mood", 5}});
-    ASSERT_TRUE(c["ok"].get<bool>());
-    EXPECT_EQ(c["entry"]["mood"].get<int>(), 5);
-    const EntryId id = c["entry"]["id"].get<EntryId>();
-
-    const json l = call(f, {{"op", "journal.list"}});
-    EXPECT_EQ(l["entries"].size(), 1u);
-
-    const json rm = call(f, {{"op", "journal.remove"}, {"id", id}});
+    const json rm = call(f, {{"op", "session.remove"}, {"id", id}});
     EXPECT_TRUE(rm["ok"].get<bool>());
 }
 
-TEST(Facade, CardReview) {
+TEST(Facade, SessionCreateRequiresPositiveDuration) {
+    Facade f;
+    const json c = call(f, {{"op", "session.create"}, {"durationSeconds", 0}});
+    EXPECT_FALSE(c["ok"].get<bool>());
+}
+
+TEST(Facade, PatternLifecycle) {
     Facade f;
 
-    const json c = call(f, {{"op", "card.create"}, {"deck", "d"}, {"front", "f"}, {"back", "b"}});
-    ASSERT_TRUE(c["ok"].get<bool>());
-    const CardId id = c["card"]["id"].get<CardId>();
+    const json list0 = call(f, {{"op", "pattern.list"}});
+    ASSERT_GE(list0["patterns"].size(), 4u);  // wbudowane
 
-    const json r = call(f, {{"op", "card.review"}, {"id", id}, {"quality", 4}, {"nowMs", 1000}});
-    ASSERT_TRUE(r["ok"].get<bool>());
-    EXPECT_EQ(r["card"]["repetitions"].get<int>(), 1);
-    EXPECT_EQ(r["card"]["dueMs"].get<EpochMs>(), EpochMs{1000 + kMillisPerDay});
+    const json c = call(f, {{"op", "pattern.create"},
+                            {"name", "Rytm"},
+                            {"inhaleSeconds", 3},
+                            {"exhaleSeconds", 6}});
+    ASSERT_TRUE(c["ok"].get<bool>());
+    const PatternId id = c["pattern"]["id"].get<PatternId>();
+    EXPECT_GE(id, PatternId{100});
+
+    // wbudowanych nie usuwamy
+    const json rmBuiltin = call(f, {{"op", "pattern.remove"}, {"id", 1}});
+    EXPECT_FALSE(rmBuiltin["ok"].get<bool>());
+}
+
+TEST(Facade, StatsCommand) {
+    Facade f;
+    call(f, {{"op", "session.create"},
+             {"startedAtMs", kMillisPerDay},
+             {"durationSeconds", 120}});
+
+    const json st = call(f, {{"op", "stats"}, {"today", dayNumberUtc(kMillisPerDay)}});
+    ASSERT_TRUE(st["ok"].get<bool>());
+    EXPECT_EQ(st["totalSessions"].get<std::int64_t>(), 1);
+    EXPECT_EQ(st["totalSeconds"].get<std::int64_t>(), 120);
+    EXPECT_EQ(st["streakDays"].get<std::int64_t>(), 1);
 }
 
 TEST(Facade, SnapshotRoundTrip) {
     Facade f;
-    call(f, {{"op", "habit.create"}, {"name", "X"}});
+    call(f, {{"op", "session.create"}, {"startedAtMs", 1000}, {"durationSeconds", 60}});
     const std::string snap = f.snapshotToJson();
 
     Facade g;

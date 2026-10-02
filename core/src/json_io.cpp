@@ -1,4 +1,4 @@
-// Ascend — serializacja magazynu do/z JSON (format zapisu v1).
+// Ascend — serializacja magazynu do/z JSON (format zapisu v2).
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ascend/json_io.h"
 
@@ -40,42 +40,50 @@ Mood moodFromInt(int v) {
 
 }  // namespace
 
-nlohmann::json habitToJson(const Habit& h) {
-    return json{
-        {"id", h.id},
-        {"name", h.name},
-        {"description", h.description},
-        {"icon", h.icon},
-        {"color", h.color},
-        {"daily", h.daily},
-        {"weekdayMask", h.weekdayMask},
-        {"createdAtMs", h.createdAtMs},
-        {"archived", h.archived},
-    };
+std::string techniqueToString(Technique t) {
+    switch (t) {
+        case Technique::Breath: return "breath";
+        case Technique::Silence: return "silence";
+        case Technique::BodyScan: return "body_scan";
+        case Technique::Walking: return "walking";
+        case Technique::Mantra: return "mantra";
+        case Technique::Guided: return "guided";
+    }
+    return "breath";
 }
 
-nlohmann::json entryToJson(const JournalEntry& e) {
-    return json{
-        {"id", e.id},
-        {"createdAtMs", e.createdAtMs},
-        {"editedAtMs", e.editedAtMs},
-        {"title", e.title},
-        {"body", e.body},
-        {"mood", moodToInt(e.mood)},
-    };
+Technique techniqueFromString(std::string_view s) {
+    if (s == "silence") return Technique::Silence;
+    if (s == "body_scan") return Technique::BodyScan;
+    if (s == "walking") return Technique::Walking;
+    if (s == "mantra") return Technique::Mantra;
+    if (s == "guided") return Technique::Guided;
+    return Technique::Breath;
 }
 
-nlohmann::json cardToJson(const Card& c) {
+nlohmann::json sessionToJson(const Session& s) {
+    json j{
+        {"id", s.id},
+        {"startedAtMs", s.startedAtMs},
+        {"durationSeconds", s.durationSeconds},
+        {"technique", techniqueToString(s.technique)},
+        {"patternId", s.patternId},
+        {"notes", s.notes},
+    };
+    if (s.moodBefore) j["moodBefore"] = moodToInt(*s.moodBefore);
+    if (s.moodAfter) j["moodAfter"] = moodToInt(*s.moodAfter);
+    return j;
+}
+
+nlohmann::json patternToJson(const BreathingPattern& p) {
     return json{
-        {"id", c.id},
-        {"deck", c.deck},
-        {"front", c.front},
-        {"back", c.back},
-        {"dueMs", c.dueMs},
-        {"intervalDays", c.intervalDays},
-        {"ease", c.ease},
-        {"repetitions", c.repetitions},
-        {"lapses", c.lapses},
+        {"id", p.id},
+        {"name", p.name},
+        {"inhaleSeconds", p.inhaleSeconds},
+        {"holdInSeconds", p.holdInSeconds},
+        {"exhaleSeconds", p.exhaleSeconds},
+        {"holdOutSeconds", p.holdOutSeconds},
+        {"builtin", p.builtin},
     };
 }
 
@@ -83,23 +91,14 @@ std::string storeToJson(const Store& store) {
     json j;
     j["schema"] = kSaveSchemaVersion;
     j["protocol"] = kProtocolVersion;
-    j["nextHabitId"] = store.nextHabitId;
-    j["nextEntryId"] = store.nextEntryId;
-    j["nextCardId"] = store.nextCardId;
+    j["nextSessionId"] = store.nextSessionId;
+    j["nextPatternId"] = store.nextPatternId;
 
-    j["habits"] = json::array();
-    for (const auto& h : store.habitsRaw()) j["habits"].push_back(habitToJson(h));
+    j["sessions"] = json::array();
+    for (const auto& s : store.sessionsRaw()) j["sessions"].push_back(sessionToJson(s));
 
-    j["completions"] = json::array();
-    for (const auto& c : store.completionsRaw()) {
-        j["completions"].push_back(json{{"habitId", c.habitId}, {"day", c.day}});
-    }
-
-    j["journal"] = json::array();
-    for (const auto& e : store.entriesRaw()) j["journal"].push_back(entryToJson(e));
-
-    j["cards"] = json::array();
-    for (const auto& c : store.cardsRaw()) j["cards"].push_back(cardToJson(c));
+    j["patterns"] = json::array();
+    for (const auto& p : store.patternsRaw()) j["patterns"].push_back(patternToJson(p));
 
     return j.dump();
 }
@@ -125,69 +124,46 @@ bool storeFromJson(std::string_view raw, Store& store, std::string& err) {
     }
 
     Store out;
-    out.nextHabitId = num<HabitId>(j, "nextHabitId", 1);
-    out.nextEntryId = num<EntryId>(j, "nextEntryId", 1);
-    out.nextCardId = num<CardId>(j, "nextCardId", 1);
+    out.nextSessionId = num<SessionId>(j, "nextSessionId", 1);
+    out.nextPatternId = num<PatternId>(j, "nextPatternId", 100);
 
-    if (j.contains("habits") && j["habits"].is_array()) {
-        for (const auto& h : j["habits"]) {
-            Habit x;
-            x.id = num<HabitId>(h, "id", 0);
-            x.name = h.value("name", std::string{});
-            x.description = h.value("description", std::string{});
-            x.icon = h.value("icon", std::string{"check"});
-            x.color = num<std::uint32_t>(h, "color", 0xFF4F46E5u);
-            x.daily = h.value("daily", true);
-            x.weekdayMask = static_cast<std::uint8_t>(
-                num<std::uint32_t>(h, "weekdayMask", 0x7Fu));
-            x.createdAtMs = num<EpochMs>(h, "createdAtMs", 0);
-            x.archived = h.value("archived", false);
-            out.habitsRaw().push_back(std::move(x));
+    if (j.contains("sessions") && j["sessions"].is_array()) {
+        for (const auto& s : j["sessions"]) {
+            Session x;
+            x.id = num<SessionId>(s, "id", 0);
+            x.startedAtMs = num<EpochMs>(s, "startedAtMs", 0);
+            x.durationSeconds = num<std::int64_t>(s, "durationSeconds", 0);
+            x.technique = techniqueFromString(s.value("technique", std::string{"breath"}));
+            x.patternId = num<PatternId>(s, "patternId", 0);
+            if (s.contains("moodBefore")) {
+                x.moodBefore = moodFromInt(static_cast<int>(num<std::int64_t>(s, "moodBefore", 0)));
+            }
+            if (s.contains("moodAfter")) {
+                x.moodAfter = moodFromInt(static_cast<int>(num<std::int64_t>(s, "moodAfter", 0)));
+            }
+            x.notes = s.value("notes", std::string{});
+            out.sessionsRaw().push_back(std::move(x));
         }
     }
-    if (j.contains("completions") && j["completions"].is_array()) {
-        for (const auto& c : j["completions"]) {
-            Completion x;
-            x.habitId = num<HabitId>(c, "habitId", 0);
-            x.day = num<DayNumber>(c, "day", 0);
-            out.completionsRaw().push_back(x);
-        }
-    }
-    if (j.contains("journal") && j["journal"].is_array()) {
-        for (const auto& e : j["journal"]) {
-            JournalEntry x;
-            x.id = num<EntryId>(e, "id", 0);
-            x.createdAtMs = num<EpochMs>(e, "createdAtMs", 0);
-            x.editedAtMs = num<EpochMs>(e, "editedAtMs", 0);
-            x.title = e.value("title", std::string{});
-            x.body = e.value("body", std::string{});
-            x.mood = moodFromInt(static_cast<int>(num<std::int64_t>(e, "mood", 3)));
-            out.entriesRaw().push_back(std::move(x));
-        }
-    }
-    if (j.contains("cards") && j["cards"].is_array()) {
-        for (const auto& c : j["cards"]) {
-            Card x;
-            x.id = num<CardId>(c, "id", 0);
-            x.deck = c.value("deck", std::string{});
-            x.front = c.value("front", std::string{});
-            x.back = c.value("back", std::string{});
-            x.dueMs = num<EpochMs>(c, "dueMs", 0);
-            x.intervalDays = c.value("intervalDays", 0.0);
-            x.ease = c.value("ease", 2.5);
-            x.repetitions = static_cast<std::int32_t>(
-                num<std::int64_t>(c, "repetitions", 0));
-            x.lapses = static_cast<std::int32_t>(
-                num<std::int64_t>(c, "lapses", 0));
-            out.cardsRaw().push_back(std::move(x));
+    if (j.contains("patterns") && j["patterns"].is_array()) {
+        for (const auto& p : j["patterns"]) {
+            BreathingPattern x;
+            x.id = num<PatternId>(p, "id", 0);
+            x.name = p.value("name", std::string{});
+            x.inhaleSeconds = static_cast<std::int32_t>(num<std::int64_t>(p, "inhaleSeconds", 4));
+            x.holdInSeconds = static_cast<std::int32_t>(num<std::int64_t>(p, "holdInSeconds", 0));
+            x.exhaleSeconds = static_cast<std::int32_t>(num<std::int64_t>(p, "exhaleSeconds", 4));
+            x.holdOutSeconds = static_cast<std::int32_t>(num<std::int64_t>(p, "holdOutSeconds", 0));
+            x.builtin = p.value("builtin", false);
+            out.patternsRaw().push_back(std::move(x));
         }
     }
 
-    // Bezpieczeństwo: kolejne id zawsze większe niż największe istniejące,
-    // nawet gdy plik został ręcznie edytowany.
-    for (const auto& h : out.habitsRaw()) out.nextHabitId = std::max(out.nextHabitId, h.id + 1);
-    for (const auto& e : out.entriesRaw()) out.nextEntryId = std::max(out.nextEntryId, e.id + 1);
-    for (const auto& c : out.cardsRaw()) out.nextCardId = std::max(out.nextCardId, c.id + 1);
+    // Bezpieczeństwo: kolejne id zawsze większe niż największe istniejące.
+    for (const auto& s : out.sessionsRaw()) out.nextSessionId = std::max(out.nextSessionId, s.id + 1);
+    for (const auto& p : out.patternsRaw()) {
+        if (p.id >= 100) out.nextPatternId = std::max(out.nextPatternId, p.id + 1);
+    }
 
     store = std::move(out);
     return true;

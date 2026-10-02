@@ -46,18 +46,27 @@ echo "sdk.dir=/sciezka/do/android-sdk" > local.properties
 
 APK trafia do `android/app/build/outputs/apk/`.
 
-### Uwaga do tej maszyny (aarch64 + NDK x86_64)
+### Uwaga do tej maszyny (aarch64 + narzędzia x86_64)
 
-Na hoście aarch64 build działa dzięki dwóm rzeczom:
+Na hoście aarch64 build działa dzięki kilku rzeczom:
 
 - `GRADLE_USER_HOME` wskazuje na cache z dystrybucją Gradle i zależnościami,
-- prebuilt NDK `.../toolchains/llvm/prebuilt/linux-x86_64/bin/` jest owinięty
-  skryptami box64 (prawdziwe binary w `bin.orig/`).
+- prebuilt NDK i narzędzia SDK (`aapt2`, `zipalign`) są owinięte skryptami
+  box64 (prawdziwe binary w `*.orig/` lub `*.real`),
+- `JAVA_TOOL_OPTIONS=-Duser.home=...` przekierowuje `user.home` JVM na
+  zapisywalny katalog — `/home/opc` jest read-only, więc Gradle nie mógłby
+  utworzyć debug keystore ani katalogu `.android`.
 
 ```bash
 export GRADLE_USER_HOME=/opt/beginner3d-data/narzedzia/gradle-home
 export ANDROID_HOME=/opt/beginner3d-data/narzedzia/android-sdk
 export JAVA_HOME=/opt/beginner3d-data/narzedzia/jdk-21.0.12.1+1
+export JAVA_TOOL_OPTIONS="-Duser.home=/opt/beginner3d-data/narzedzia/android-home"
+export PATH="$JAVA_HOME/bin:$PATH"
 ```
+
+Uwaga: `zipalign` z SDK na tej maszynie nie ładuje bibliotek przez box64 —
+podpisując APK, pomiń `zipalign` (AGP już wyrównuje APK) i użyj samego
+`apksigner` (to skrypt Java, działa natywnie).
 
 Na zwykłym x86_64 te zmienne nie są potrzebne (standardowy NDK działa natywnie).
