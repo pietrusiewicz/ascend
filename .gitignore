@@ -1,0 +1,26 @@
+# Build (CMake, host)
+/build/
+/build.log
+compile_commands.json
+.deps/
+
+# Android / Gradle
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.cxx/
+android/app/.cxx/
+android/.externalNativeBuild/
+android/app/.externalNativeBuild/
+android/captures/
+
+# IDE / OS
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# Python (skrypty pomocnicze)
+__pycache__/
+*.pyc

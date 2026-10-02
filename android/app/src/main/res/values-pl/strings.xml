@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ascend</string>
+
+    <string name="tab_home">Dziś</string>
+    <string name="tab_habits">Nawyki</string>
+    <string name="tab_journal">Dziennik</string>
+    <string name="tab_learn">Nauka</string>
+
+    <string name="home_title">Dziś</string>
+    <string name="overview_habits">Aktywne nawyki</string>
+    <string name="overview_done">Zrobione dziś</string>
+    <string name="overview_due">Karty do powtórki</string>
+    <string name="overview_entries">Wpisy w dzienniku</string>
+
+    <string name="habits_title">Nawyki</string>
+    <string name="habits_add">Nowy nawyk</string>
+    <string name="habits_name">Nazwa</string>
+    <string name="habits_description">Opis (opcjonalnie)</string>
+    <string name="habits_empty">Brak nawyków. Dodaj pierwszy!</string>
+    <string name="streak_current">Seria: %1$d</string>
+    <string name="streak_longest">Rekord: %1$d</string>
+
+    <string name="journal_title">Dziennik</string>
+    <string name="journal_add">Nowy wpis</string>
+    <string name="journal_title_label">Tytuł</string>
+    <string name="journal_body_label">Jak minął dzień?</string>
+    <string name="journal_mood">Nastrój</string>
+    <string name="journal_empty">Brak wpisów.</string>
+    <string name="journal_delete">Usuń</string>
+
+    <string name="learn_title">Nauka</string>
+    <string name="learn_add">Nowa karta</string>
+    <string name="learn_deck">Talia</string>
+    <string name="learn_front">Przód</string>
+    <string name="learn_back">Tył</string>
+    <string name="learn_empty">Na razie brak kart do powtórki.</string>
+    <string name="learn_show">Pokaż odpowiedź</string>
+    <string name="learn_again">Znowu</string>
+    <string name="learn_hard">Trudne</string>
+    <string name="learn_good">Dobrze</string>
+    <string name="learn_easy">Łatwe</string>
+
+    <string name="mood_awful">Okropnie</string>
+    <string name="mood_bad">Źle</string>
+    <string name="mood_neutral">Neutralnie</string>
+    <string name="mood_good">Dobrze</string>
+    <string name="mood_great">Świetnie</string>
+
+    <string name="save">Zapisz</string>
+    <string name="cancel">Anuluj</string>
+</resources>

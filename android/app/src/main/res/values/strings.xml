@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ascend</string>
+
+    <string name="tab_home">Today</string>
+    <string name="tab_habits">Habits</string>
+    <string name="tab_journal">Journal</string>
+    <string name="tab_learn">Learn</string>
+
+    <string name="home_title">Today</string>
+    <string name="overview_habits">Active habits</string>
+    <string name="overview_done">Done today</string>
+    <string name="overview_due">Cards due</string>
+    <string name="overview_entries">Journal entries</string>
+
+    <string name="habits_title">Habits</string>
+    <string name="habits_add">New habit</string>
+    <string name="habits_name">Name</string>
+    <string name="habits_description">Description (optional)</string>
+    <string name="habits_empty">No habits yet. Add your first one!</string>
+    <string name="streak_current">Streak: %1$d</string>
+    <string name="streak_longest">Best: %1$d</string>
+
+    <string name="journal_title">Journal</string>
+    <string name="journal_add">New entry</string>
+    <string name="journal_title_label">Title</string>
+    <string name="journal_body_label">How was your day?</string>
+    <string name="journal_mood">Mood</string>
+    <string name="journal_empty">No entries yet.</string>
+    <string name="journal_delete">Delete</string>
+
+    <string name="learn_title">Learn</string>
+    <string name="learn_add">New card</string>
+    <string name="learn_deck">Deck</string>
+    <string name="learn_front">Front</string>
+    <string name="learn_back">Back</string>
+    <string name="learn_empty">No cards due right now.</string>
+    <string name="learn_show">Show answer</string>
+    <string name="learn_again">Again</string>
+    <string name="learn_hard">Hard</string>
+    <string name="learn_good">Good</string>
+    <string name="learn_easy">Easy</string>
+
+    <string name="mood_awful">Awful</string>
+    <string name="mood_bad">Bad</string>
+    <string name="mood_neutral">Neutral</string>
+    <string name="mood_good">Good</string>
+    <string name="mood_great">Great</string>
+
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+</resources>
